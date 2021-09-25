@@ -1,0 +1,1 @@
+package com.liuwentao.bililottery.util;/** * Created by liuwentao on 2021/9/12 21:32 */public class EmptyUtil {    public static boolean isEmpty(Object object) {        return object == null;    }}

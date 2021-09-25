@@ -1,0 +1,1 @@
+package com.liuwentao.bililottery.Entity;import lombok.Builder;import lombok.Data;/** * Created by liuwentao on 2021/9/18 20:47 * * 小程序用户登录的时候发过来的请求数据 */@Datapublic class WeChatRequest {    private String avatarUrl;    private String nickName;    private String code;}

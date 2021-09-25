@@ -1,0 +1,1 @@
+package com.liuwentao.bililottery.Entity;import lombok.Builder;import lombok.Data;/** * Created by liuwentao on 2021/9/18 10:46 */@Data@Builderpublic class LotteryResult extends Reply{    private int index; // 表的主键    private String openId; // 某个人    private String patternId; // 某条动态/视频    // 选中的评论的属性    // 继承reply...}

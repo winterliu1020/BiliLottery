@@ -1,0 +1,1 @@
+package com.liuwentao.bililottery.Entity;import lombok.Builder;import lombok.Data;import java.util.Date;/** * Created by liuwentao on 2021/9/23 23:16 * * A关注B产生的关注信息：比如关注时间，B的uId... */@Data@Builderpublic class Following {    // 这里只存储关注时间和uid    private Date followingTime; // A 什么时候关注的 B    private String uid; // B的uId}

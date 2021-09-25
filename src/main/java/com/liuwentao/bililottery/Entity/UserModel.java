@@ -1,0 +1,1 @@
+package com.liuwentao.bililottery.Entity;import lombok.Builder;import lombok.Data;/** * Created by liuwentao on 2021/9/12 20:56 * * 小程序的用户的一些信息; 需持久化 */@Data@Builderpublic class UserModel {    private String openId;    private String avatarUrl;    private String nickName;}

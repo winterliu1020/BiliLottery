@@ -1,0 +1,1 @@
+package com.liuwentao.bililottery.Entity;import lombok.Builder;import lombok.Data;/** * Created by liuwentao on 2021/9/12 20:18 * * 用户执行登录请求，后端返回给用户的数据 */@Data@Builderpublic class WeChatSessionModel {    private String session_key;}

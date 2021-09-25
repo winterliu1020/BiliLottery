@@ -1,0 +1,1 @@
+package com.liuwentao.bililottery.Entity;import lombok.Builder;import lombok.Data;import java.util.List;/** * Created by liuwentao on 2021/9/19 16:23 */@Data@Builderpublic class AllBiliWrapper {    private List<BiliWrapper> lotteryHaveBeenDrawn;    private List<BiliWrapper> lotteryNotDrawYet;}

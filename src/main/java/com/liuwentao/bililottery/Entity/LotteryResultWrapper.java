@@ -1,0 +1,1 @@
+package com.liuwentao.bililottery.Entity;import lombok.Builder;import lombok.Data;import java.util.List;/** * Created by liuwentao on 2021/9/19 15:30 */@Data@Builderpublic class LotteryResultWrapper {    private PostLottery postLottery; // 抽奖设置信息    private List<LotteryResult> lotteryResult; // 抽奖名单}

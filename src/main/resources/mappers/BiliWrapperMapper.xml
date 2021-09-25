@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.liuwentao.bililottery.mappers.BiliWrapperMapper">
+
+    <select id="findLotteryHaveBeenDrawnByOpenId" resultType="com.liuwentao.bililottery.Entity.BiliWrapper">
+        select * from BiliWrapper where id in (select id from PostLotteryTab where openId = #{openId} and TIMESTAMPDIFF(second , lotteryDateAndTime, NOW()) &gt;= 0 )
+    </select>
+
+    <select id="findLotteryNotDrawYetByOpenId" resultType="com.liuwentao.bililottery.Entity.BiliWrapper">
+        select * from BiliWrapper where id in (select id from PostLotteryTab where openId = #{openId} and TIMESTAMPDIFF(second, lotteryDateAndTime, NOW()) &lt; 0)
+    </select>
+
+    <insert id="replaceBiliWrapper" useGeneratedKeys="true" parameterType="com.liuwentao.bililottery.Entity.BiliWrapper">
+        replace into BiliWrapper values(#{id}, #{likeCount}, #{pubTime}, #{url}, #{commentCount}, #{shareCount}, #{pic}, #{title}, #{coinCount}, #{viewCount}, #{desc})
+    </insert>
+</mapper>

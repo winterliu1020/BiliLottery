@@ -1,0 +1,1 @@
+package com.liuwentao.bililottery.Entity;import lombok.Builder;import lombok.Data;/** * Created by liuwentao on 2021/9/19 14:49 * * 包含：B站的媒介信息、对该媒介信息发起的抽奖设置信息 */@Data@Builderpublic class BiliPostLottery {    private BiliWrapper biliWrapper;    private PostLottery postLottery;}

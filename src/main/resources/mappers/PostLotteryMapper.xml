@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.liuwentao.bililottery.mappers.PostLotteryMapper">
+
+    <insert id="replacePostLottery" useGeneratedKeys="true" parameterType="com.liuwentao.bililottery.Entity.PostLottery">
+        replace into PostLotteryTab values(#{openId},#{id},#{upId},#{count},#{prizeNotes},#{lotteryType},#{unlimitedStart},#{unlimitedEnd},#{start},#{end},#{getStart},#{letEnd},#{duplicatedUid},#{onlySpecified},#{contentSpecified},#{out},#{timeLottery},#{lotteryDateAndTime})
+    </insert>
+
+    <!-- 查找数据库中所有的在时间范围：(currentTime, nextTime] 的记录 -->
+    <select id="findPostLotteryBetweenCurrentTimeAndNextTime" resultType="com.liuwentao.bililottery.Entity.PostLottery">
+        select * from PostLotteryTab where TIMESTAMPDIFF(second, lotteryDateAndTime, NOW()) &lt; 0 and TIMESTAMPDIFF(second, lotteryDateAndTime, #{nextTime}) &gt;= 0
+    </select>
+
+    <select id="findPostLotteryByOpenIdAndId" resultType="com.liuwentao.bililottery.Entity.PostLottery">
+        select * from PostLotteryTab where openId = #{openId} and id = #{id}
+    </select>
+</mapper>

@@ -1,0 +1,1 @@
+package com.liuwentao.bililottery.Service;import com.liuwentao.bililottery.Entity.UserModel;import org.springframework.stereotype.Service;/** * Created by liuwentao on 2021/9/12 21:19 */public interface UserService {    UserModel findUserByOpenId(String openId);    boolean insertUser(UserModel userModel);}
