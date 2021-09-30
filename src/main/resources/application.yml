@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8081
 
 
 spring:
@@ -7,12 +7,13 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://127.0.0.1:3306/BiliLottery?serverTimezone=GMT%2B8
     username: root
-    password: 19980321lwt
+    password:
   redis:
     database: 0
     host: 127.0.0.1
     port: 6379
-    password: # 如果未单独配置默认为空即可
+    password:
+    # 如果未单独配置默认为空即可
     timeout: 1000
     jedis:
       pool:

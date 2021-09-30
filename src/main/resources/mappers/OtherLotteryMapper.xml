@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.liuwentao.bililottery.mappers.OtherLotteryMapper">
+    <select id="findAllOtherLottery" resultType="com.liuwentao.bililottery.Entity.OtherLottery">
+        select * from OtherLottery
+        <if test="order !=null and order != '' ">
+            order by ${order}
+        </if>
+    </select>
+    <select id="findNewOtherLottery" resultType="com.liuwentao.bililottery.Entity.OtherLottery">
+        select * from OtherLottery
+        where lotteryDateAndTime > now()
+        <if test="order !=null and order != '' ">
+            order by ${order}
+        </if>
+    </select>
+</mapper>
