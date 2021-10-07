@@ -5,10 +5,12 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.liuwentao.bililottery.Entity.BearerType;
 import com.liuwentao.bililottery.Entity.Reply;
+import io.swagger.models.auth.In;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -64,6 +66,9 @@ public class Help {
                     return getFormalIdFromRawId(rawId);
                 }
             }
+        } else // rawId
+        {
+            return getFormalIdFromRawId(pattern);
         }
         return "";
     }
@@ -266,6 +271,19 @@ public class Help {
             totalList.set(pRandom, totalList.get(i - 1));
         }
     }
+
+    // 只获取指定数量的随机索引
+    public static List<Integer> getRandomIndexList(int[] source, int count) {
+        List<Integer> result = new ArrayList<>();
+        for (int i = source.length; i > source.length - count; i--) {
+            int pRandom = (int)(Math.random() * i);
+            result.add(source[pRandom]);
+            // 把最后一个元素更新当前选中的位置
+            source[pRandom] = source[i - 1];
+        }
+        return result;
+    }
+
 
     // 先随机出一个人，再判断是否关注，关注了则放到结果集合，没关注则继续随机抽下一个；注意：这里抽出来的result中评论个数可能少于count
     public static void getRandomResultListWithFollowing(ArrayList<Reply> result, ArrayList<Reply> totalList, int count, String upId) {

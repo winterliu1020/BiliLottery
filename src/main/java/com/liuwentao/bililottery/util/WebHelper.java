@@ -4,17 +4,13 @@ package com.liuwentao.bililottery.util;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import lombok.Synchronized;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
-import org.springframework.aop.framework.ProxyProcessorSupport;
-import sun.net.www.http.HttpClient;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
