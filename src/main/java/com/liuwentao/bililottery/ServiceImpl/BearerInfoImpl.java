@@ -42,7 +42,7 @@ public class BearerInfoImpl implements BearerInfo {
                 // 针对每种评论承载者做对应处理
                 String content = WebHelper.getResponse(detailApiUrl, "{\"code\":0");
 
-                System.out.println(content);
+                log.info("评论承载着内容：" + content);
 
                 if (!"".equals(content)) {
                     Map top = JSON.parseObject(content); // 请求返回的JSON数据的最外层
