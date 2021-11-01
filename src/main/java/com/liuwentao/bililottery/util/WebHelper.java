@@ -4,16 +4,24 @@ package com.liuwentao.bililottery.util;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.liuwentao.bililottery.Configuration.SpringApplicationContextHolder;
+import com.liuwentao.bililottery.Service.IGlobalCache;
+import com.liuwentao.bililottery.mappers.LotteryResultMapper;
+import com.liuwentao.bililottery.redis.GetResponseConsumer;
+import com.liuwentao.bililottery.redis.GetResponseProducer;
+import com.liuwentao.bililottery.redis.RedisQueueMessage;
 import lombok.Synchronized;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 import org.springframework.aop.framework.ProxyProcessorSupport;
+import org.springframework.beans.factory.annotation.Autowired;
 import sun.net.www.http.HttpClient;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -26,12 +34,12 @@ import java.util.concurrent.TimeUnit;
 public class WebHelper {
 
     private static OkHttpClient biliJumpRequestClient = new OkHttpClient().newBuilder().followRedirects(false).connectTimeout(5, TimeUnit.SECONDS).build();
-    private static OkHttpClient biliRequestClient = new OkHttpClient().newBuilder().connectTimeout(5, TimeUnit.SECONDS).build();
-    private static OkHttpClient proxyRequestClient = new OkHttpClient().newBuilder().connectTimeout(5, TimeUnit.SECONDS).build();
 
-    private static Object biliRequestLock = new Object();
+
+
     private static Object proxyListLock = new Object();
-    private static String proxyApiUrl = "https://ip.jiangxianli.com/api/proxy_ips?order_by=validated_at&country=中国&order_rule=DESC";
+
+
     // 获取b站分享链接重定向跳转的目标URL
     public static String getRedirect(String url) {
         // 循环（获取代理列表、判断是否可用、prefix是正确）
@@ -58,144 +66,63 @@ public class WebHelper {
     // 获取b站API的响应内容直到响应首字符串与ChkPrefix相同
     public static String getResponse(String url, String chkPrefix) {
 
+        String key = new Date().getTime() + ":" + url;
 
-        String biliResponse = "";
-        // 对整个请求过程加锁，防止重复实例化httpclient
-        synchronized (biliRequestLock) {
-            biliResponse = rawGetResponse(url, true); // 不变，如果当前网络环境
+        // 加入redis后，需要修改逻辑：调用getResponse方法会把该url请求放到消息队列中，然后<key, 初始化值>放到redis的map中，然后不断的去请求map中key对应的value，看初始值有没有发生变化，变化了则说明已经调用b站api并得到了一个返回
+        // 用生产者去生产；消费者在程序运行起来后就不断地去消息队列中取消息
+        // 注入生产者、消费者
+        GetResponseProducer getResponseProducer = SpringApplicationContextHolder.getBean(GetResponseProducer.class);
+        GetResponseConsumer getResponseConsumer = SpringApplicationContextHolder.getBean(GetResponseConsumer.class);
+        IGlobalCache iGlobalCache = SpringApplicationContextHolder.getBean(IGlobalCache.class);
 
-            // 如果当前是判断关注者的url，且返回的code是22115，说明该用户设置了隐私，所以也不需要往下面用别的查看数据了
-            if (url.startsWith("https://api.bilibili.com/x/relation/followings") && biliResponse.startsWith("{\"code\":22115,")) {
-                return "PrivacyIsSet";
-            }
+        // 生产
+        getResponseProducer.sendMessage(getResponseConsumer.getQueueName(), key); // 将一个代表url请求的key值放到消息队列中
 
+        // 将一个键值对放到redis的map中，然后去轮询这个map，看初始值有无变化，有变化说明B站接口返回了值
+        // 用请求url+时间戳 构造key
 
-            // B站接口无法返回数据通过校验
-            if (!biliResponse.startsWith(chkPrefix)) {
-                // 先尝试无代理的httpclient
-                log.info("先尝试无代理的httpclient去请求：" + url);
-                biliRequestClient = new OkHttpClient().newBuilder().connectTimeout(5, TimeUnit.SECONDS).build();
-                biliResponse = rawGetResponse(url, true);
-//                log.info("尝试无代理的httpclient得到的结果：" + biliResponse);
+        iGlobalCache.set(key, new String("initValue")); // 消费者消费完之后会将消费结果放到redis中，接下来我通过不断轮询看是否已经拿到结果
 
-                // 如果当前是判断关注者的url，且返回的code是22115，说明该用户设置了隐私，所以也不需要往下面用别的查看数据了
-                if (url.startsWith("https://api.bilibili.com/x/relation/followings") && biliResponse.startsWith("{\"code\":22115,")) {
-                    return "PrivacyIsSet";
-                }
+        int reTransportTimes = 1; // 设置重传次数1次
+        while (reTransportTimes++ <= 1) {
+            int tryTime = 1;
+            while (tryTime++ <= 20) {
+                // 每秒查看一次redis
+                String value = iGlobalCache.get(key).toString();
+                if (!"initValue".equals(value)) {
+                    // 说明B站已经返回了数据，但是还要看是否是返回正常数据
+                    log.info("对于当前url" + url + " ,b站返回了结果");
+//                    log.info("对于当前url" + url + " ,b站返回了结果：" + value);
 
-                // 无代理的httpclient无法请求到数据，使用代理池
-                if (!biliResponse.startsWith(chkPrefix)) {
-                    log.info("无代理的httpclient无法请求到数据，开始使用代理池");
-                    int page = 1;
-                    while (true) {
-                        ArrayList<Proxy> proxyList = getProxyList(page++);
-                        if (proxyList.size() == 0) {
-                            biliRequestClient = new OkHttpClient().newBuilder().connectTimeout(5, TimeUnit.SECONDS).build();
-                            biliResponse = rawGetResponse(url, true);
+                    // 如果当前是判断关注者的url，且返回的code是22115，说明该用户设置了隐私，所以也不需要往下面用别的查看数据了
+                    if (url.startsWith("https://api.bilibili.com/x/relation/followings") && "PrivacyIsSet".equals(value)) {
+                        return "PrivacyIsSet";
+                    }
 
-                            // 如果当前是判断关注者的url，且返回的code是22115，说明该用户设置了隐私，所以也不需要往下面用别的查看数据了
-                            if (url.startsWith("https://api.bilibili.com/x/relation/followings") && biliResponse.startsWith("{\"code\":22115,")) {
-                                return "PrivacyIsSet";
-                            }
-
-                        } else {
-                            boolean availableProxy = false;
-                            for (Proxy proxy : proxyList) {
-                                // 替换biliRequestClient
-                                log.info("当前使用的代理池：" + proxy.toString());
-                                biliRequestClient = new OkHttpClient().newBuilder().connectTimeout(5, TimeUnit.SECONDS).proxy(proxy).build();
-                                // 用替换后的替换biliRequestClient请求B站接口
-                                biliResponse = rawGetResponse(url, true);
-
-                                // 如果当前是判断关注者的url，且返回的code是22115，说明该用户设置了隐私，所以也不需要往下面用别的查看数据了
-                                if (url.startsWith("https://api.bilibili.com/x/relation/followings") && biliResponse.startsWith("{\"code\":22115,")) {
-                                    return "PrivacyIsSet";
-                                }
-
-                                if (biliResponse.startsWith(chkPrefix)) {
-                                    log.info("当前代理成功获取到B站数据");
-                                    availableProxy = true;
-                                    break;
-                                } else {
-                                    log.info("当前代理获取到B站数据失败，尝试代理池中下一个代理");
-                                }
-                            }
-                            if (availableProxy) {
-                                break;
-                            }
-                        }
+                    // 否则的话看是否返回code:0开头的数据，是的话说明是我们想要的数据
+                    if (value.startsWith(chkPrefix)) {
+//                        log.info("当前url" + url + " ,b站返回了正常的数据结果，getResponse请求正常结束：" + value);
+                        log.info("当前url" + url + " ,b站返回了正常的数据结果，getResponse请求正常结束：");
+                        return value;
                     }
                 }
-            }
-        }
-        return biliResponse;
-    }
 
-    // 获取代理池代理：这里用的是别人汇总的一些节点；也可以采用爬取的方式：https://www.cnblogs.com/xinxihua/p/14541247.html
-    public static ArrayList<Proxy> getProxyList(int page) {
-        ArrayList<Proxy> proxyArrayList = new ArrayList<>();
-        // 代理池API首页，获取最大页数
-        String firstPageContent = rawGetResponse(proxyApiUrl, false);
-        if (!"".equals(firstPageContent)) {
-            Map mapTypes = JSON.parseObject(firstPageContent);
-//            System.out.println("这个是用JSON类的parseObject来解析JSON字符串!!!");
-//            for (Object obj : mapTypes.keySet()){
-//                System.out.println("key为："+obj+"值为："+mapTypes.get(obj).getClass().getName());
-//            }
-            JSONObject firstPageData = (JSONObject) mapTypes.get("data");
-            int lastPage = (Integer) firstPageData.get("last_page");
-            if (page <= lastPage) {
-                String pageContent = rawGetResponse(proxyApiUrl + "&page=" + page, false);
-                if (!"".equals(pageContent)) {
-                    Map contentParsed = JSON.parseObject(firstPageContent);
-                    JSONObject pageData = (JSONObject) contentParsed.get("data");
-                    JSONArray proxyJsonArray = (JSONArray) pageData.get("data");
-                    for (Object jsonObject : proxyJsonArray) {
-                        Map tempMap = JSON.parseObject(jsonObject.toString());
-                        log.info("获取到的代理：" + tempMap.get("protocol") + "  " + tempMap.get("ip") + "  " + tempMap.get("port"));
-                        if (tempMap.get("protocol").toString().equals("http")) { // 只会把http代理加入到proxyArrayList中
-                            proxyArrayList.add(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(tempMap.get("ip").toString(), Integer.parseInt(tempMap.get("port").toString()))));
-                        }
-                    }
-                }
-            }
-        }
-        return proxyArrayList;
-    }
-
-    // 返回response中整个body字符串；通过传入biliApi的true or false来控制发送哪一个request
-    public static String rawGetResponse(String url, boolean biliApi) {
-        // 创建request请求
-        Request request = new Request.Builder().url(url).build();
-        Response response = null;
-
-        if (biliApi) {
-            // 创建连接，调用同步
-            Call callBili = biliRequestClient.newCall(request);
-            try {
-                response = callBili.execute();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            // 加锁防止并发访问代理服务器
-            synchronized (proxyListLock) {
-                // 创建连接，调用同步
-                Call callProxy = proxyRequestClient.newCall(request);
+                log.info("当前url请求是：" + url + "，尝试第 " + reTransportTimes + " 次超时重传，第 " + tryTime + " 次查看redis结果集没有得到处理结果，准备休眠一秒后再试");
                 try {
-                    response = callProxy.execute();
-                } catch (IOException e) {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
+            log.info("当前url" + url + " ，20次查看redis都没有得到b站返回的结果，开始执行第" + reTransportTimes + " 次重传（重新放到消息队列）");
+
         }
-        if (response != null && response.isSuccessful()) {
-            try {
-                return response.body().string();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        log.info("当前url" + url + " 一次重传失败，返回网络错误提示，让用户稍后重试");
         return "";
+
     }
+
+
+
+
 }

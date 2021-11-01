@@ -1,0 +1,1 @@
+package com.liuwentao.bililottery.redis;/** * Created by liuwentao on 2021/9/26 13:56 * * redis队列消费者接口 */public interface RedisQueueConsumer {    // 获取队列名称    String getQueueName();    // 获取监听器返回的消息    void getMessage(String redisQueueMessage);    // 获取监听器返回的错误消息    void error(String error);}
