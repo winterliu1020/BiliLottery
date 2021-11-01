@@ -1,13 +1,13 @@
 server:
-  port: 8081
+  port: 8080
 
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/BiliLottery?serverTimezone=GMT%2B8
     username: root
-    password: 19980321lwt #  Root_
-#    password: Root_19980321lwt
+#    password: 19980321lwt #  Root_
+    password: Root_19980321lwt
   redis:
     database: 0
     host: 127.0.0.1

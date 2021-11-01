@@ -94,6 +94,8 @@ public class WebHelper {
                                 return "PrivacyIsSet";
                             }
 
+                            // 代理池中所有代理都没有拿到正确数据，则退出while循环
+                            break;
                         } else {
                             boolean availableProxy = false;
                             for (Proxy proxy : proxyList) {
